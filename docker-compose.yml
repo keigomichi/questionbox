@@ -1,7 +1,8 @@
-version: "3.9"
+version: '3'
 services:
   mysql:
     image: mysql:latest
+    platform: linux/amd64
     environment:
       MYSQL_ROOT_PASSWORD: password
     volumes:

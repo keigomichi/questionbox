@@ -1,42 +1,27 @@
-create database questionbox;
+CREATE DATABASE `questionbox` DEFAULT CHARACTER SET utf8mb4;
 
-use questionbox;
+USE `questionbox`;
 
--- drop table posts;
--- drop table threads;
--- drop table sessions;
--- drop table users;
+DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `questions`;
+DROP TABLE IF EXISTS `posts`;
 
-create table users (
-  id         serial primary key,
-  uuid       varchar(64) not null unique,
-  name       varchar(255),
-  email      varchar(255) not null unique,
-  password   varchar(255) not null,
-  created_at timestamp not null   
+CREATE TABLE `users` (
+  `Username` varchar(255) NOT NULL,
+  `HashedPass` varchar(255) NOT NULL,
+  PRIMARY KEY (`Username`)
 );
 
-create table sessions (
-  id         serial primary key,
-  uuid       varchar(64) not null unique,
-  email      varchar(255),
-  user_id    integer references users(id),
-  created_at timestamp not null   
+CREATE TABLE `questions` (
+  `ID` int NOT NULL AUTO_INCREMENT,
+  `CONTENT` char(255) NOT NULL,
+  PRIMARY KEY (`ID`)
 );
 
-create table threads (
-  id         serial primary key,
-  uuid       varchar(64) not null unique,
-  topic      text,
-  user_id    integer references users(id),
-  created_at timestamp not null       
-);
-
-create table posts (
-  id         serial primary key,
-  uuid       varchar(64) not null unique,
-  body       text,
-  user_id    integer references users(id),
-  thread_id  integer references threads(id),
-  created_at timestamp not null  
+CREATE TABLE `posts` (
+  `ID` int NOT NULL AUTO_INCREMENT,
+  `CONTENT` varchar(255) NOT NULL,
+  `QuestionID` int NOT NULL,
+  PRIMARY KEY (`ID`),
+  FOREIGN KEY (`QuestionID`) REFERENCES `questions` (`ID`)
 );
