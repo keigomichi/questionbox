@@ -15,6 +15,7 @@ CREATE TABLE `users` (
 CREATE TABLE `questions` (
   `ID` int NOT NULL AUTO_INCREMENT,
   `CONTENT` char(255) NOT NULL,
+  `ANSWER` char(255) DEFAULT '',
   PRIMARY KEY (`ID`)
 );
 

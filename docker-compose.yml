@@ -1,11 +1,46 @@
+# version: '3'
+# services:
+#   mysql:
+#     image: mysql:latest
+#     platform: linux/amd64
+#     environment:
+#       MYSQL_ROOT_PASSWORD: password
+#     volumes:
+#       - ./data:/docker-entrypoint-initdb.d
+#     ports:
+#       - 127.0.0.1:3306:3306
+
 version: '3'
 services:
+  go:
+    build: .
+    tty: true
+    environment:
+      DB_USERNAME: "root"
+      DB_PASSWORD: "password"
+      DB_HOSTNAME: "mysql"
+      DB_PORT: "3306"
+      DB_DATABASE: "questionbox"
+    volumes:
+      - .:/usr/src/app/
+    ports:
+      - 4000:4000
+    depends_on:
+      - mysql
+    entrypoint:
+      - dockerize
+      - -timeout
+      - 60s
+      - -wait
+      - tcp://mysql:3306
+    command: /questionbox
   mysql:
     image: mysql:latest
+    container_name: mysql
     platform: linux/amd64
     environment:
       MYSQL_ROOT_PASSWORD: password
     volumes:
       - ./data:/docker-entrypoint-initdb.d
     ports:
-      - 127.0.0.1:3306:3306
+      - 3306:3306

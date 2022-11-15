@@ -17,14 +17,19 @@ import (
 )
 
 type Question struct {
-	ID      int    `json:"id,omitempty"  db:"ID"`
-	Content string `json:"content,omitempty"  db:"Content"`
+	ID      int    `json:"id,omitempty" form:"id,omitempty" db:"ID"`
+	Content string `json:"content,omitempty" form:"content"  db:"Content"`
+	Answer  string `json:"answer,omitempty" form:"answer"  db:"Answer"`
 }
 
 type Post struct {
 	ID         int    `json:"id,omitempty"  db:"ID"`
 	Content    string `json:"content,omitempty"  db:"Content"`
 	QuestionID int    `json:"questionId,omitempty"  db:"QuestionID"`
+}
+
+type QuestionAnswer struct {
+	Answer string `json:"answer,omitempty" form:"answer"  db:"Answer"`
 }
 
 var (
@@ -60,6 +65,8 @@ func main() {
 
 	withLogin := e.Group("")
 	withLogin.Use(checkLogin)
+	withLogin.POST("/answer", postAnswer)
+	withLogin.GET("/whoami", getWhoAmIHandler)
 
 	e.Start(":4000")
 }
@@ -72,6 +79,53 @@ type LoginRequestBody struct {
 type User struct {
 	Username   string `json:"username,omitempty"  db:"Username"`
 	HashedPass string `json:"-"  db:"HashedPass"`
+}
+
+type Me struct {
+	Username string `json:"username,omitempty"  db:"username"`
+}
+
+func getWhoAmIHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, Me{
+		Username: c.Get("userName").(string),
+	})
+}
+
+func postAnswer(c echo.Context) error {
+	questionId := c.QueryParam("id")
+
+	var questionAnswer QuestionAnswer
+	if err := c.Bind(&questionAnswer); err != nil {
+		return c.String(http.StatusBadRequest, "400 Bad Request")
+	}
+
+	var question Question
+	err := db.Get(&question, "SELECT ID, Content, Answer FROM questions WHERE ID=?", questionId)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("(1)db error: %v", err))
+	}
+
+	_, err = db.Exec("UPDATE questions SET Answer=? WHERE ID=?", questionAnswer.Answer, questionId)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("(2)db error: %v", err))
+	}
+
+	var questions []Question
+	questions = make([]Question, 0)
+	rows, err := db.Query("SELECT ID, Content, Answer FROM questions")
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("(3)db error: %v", err))
+	}
+
+	for rows.Next() {
+		var question Question
+		if err = rows.Scan(&question.ID, &question.Content, &question.Answer); err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("(4)db error: %v", err))
+		}
+		questions = append(questions, question)
+	}
+
+	return c.JSON(http.StatusCreated, questions)
 }
 
 func getPosts(c echo.Context) error {
@@ -110,14 +164,14 @@ func getPosts(c echo.Context) error {
 func getQuestions(c echo.Context) error {
 	var questions []Question
 	questions = make([]Question, 0)
-	rows, err := db.Query("SELECT ID, Content FROM questions")
+	rows, err := db.Query("SELECT ID, Content, Answer FROM questions")
 	if err != nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
 	}
 
 	for rows.Next() {
 		var question Question
-		if err = rows.Scan(&question.ID, &question.Content); err != nil {
+		if err = rows.Scan(&question.ID, &question.Content, &question.Answer); err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
 		}
 		questions = append(questions, question)
@@ -138,7 +192,22 @@ func createQuestion(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
 	}
 
-	return c.NoContent(http.StatusCreated)
+	var questions []Question
+	questions = make([]Question, 0)
+	rows, err := db.Query("SELECT ID, Content, Answer FROM questions")
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
+	}
+
+	for rows.Next() {
+		var question Question
+		if err = rows.Scan(&question.ID, &question.Content, &question.Answer); err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("db error: %v", err))
+		}
+		questions = append(questions, question)
+	}
+
+	return c.JSON(http.StatusCreated, questions)
 }
 
 func createPost(c echo.Context) error {
